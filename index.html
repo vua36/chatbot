@@ -29,6 +29,7 @@ h1{font-size:17px;font-weight:600;margin:0}
 @media (prefers-reduced-motion:reduce){.wait{animation:none}}
 .thumb{display:block;max-width:100%;max-height:220px;border-radius:12px;margin-bottom:6px}
 .tag{font-size:14px;opacity:.85;margin-bottom:4px}
+.file-link{display:inline-block;margin:4px 0;padding:6px 10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-size:14px;text-decoration:none;color:var(--accent)}
 #chip{display:flex;align-items:center;gap:10px;margin:0 12px;padding:8px 12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;font-size:14px}
 #chip[hidden]{display:none}
 #chip img{width:40px;height:40px;object-fit:cover;border-radius:8px}
@@ -80,14 +81,13 @@ textarea{flex:1;resize:none;font:inherit;color:inherit;background:var(--surface)
 <div id="viewer" hidden><button type="button" aria-label="Đóng">×</button><img alt="Ảnh phóng to"></div>
 <script>
 const API_URL = "https://chatbotvua36.duong158209.workers.dev";
-const MAX_CONTEXT = 20;
-const MAX_FILE_CHARS = 8000;
+const MAX_CONTEXT = 30;
+const MAX_FILE_CHARS = 15000;
 const $ = id => document.getElementById(id);
 const list = $("list"), box = $("box"), send = $("send"), form = $("form"), chip = $("chip"), fileInput = $("file");
 let history = [], busy = false, pending = null;
 
-// Hiển thị markdown + công thức toán. Không tải được thư viện thì hiện chữ thường.
-const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&", "<": "<", ">": ">", '"': """ }[c]));
 function rich(el, src) {
   if (!(window.marked && window.DOMPurify)) { el.textContent = src; return; }
   const math = [];
@@ -109,7 +109,8 @@ try { history = JSON.parse(localStorage.getItem("chat") || "[]"); } catch (e) {}
 function save() {
   const pack = withThumb => JSON.stringify(history.map(m => ({
     role: m.role, content: m.content, caption: m.caption, file: m.file,
-    hadImage: !!(m.image || m.thumb || m.hadImage), thumb: withThumb ? m.thumb : undefined
+    hadImage: !!(m.image || m.thumb || m.hadImage), thumb: withThumb ? m.thumb : undefined,
+    genImage: m.genImage, genFiles: m.genFiles
   })));
   try { localStorage.setItem("chat", pack(true)); }
   catch (e) { try { localStorage.setItem("chat", pack(false)); } catch (e2) {} }
@@ -122,6 +123,20 @@ function add(m, extra) {
   if (m.image || m.thumb) { const i = document.createElement("img"); i.className = "thumb"; i.alt = "Ảnh đã gửi"; i.src = m.image || m.thumb; d.appendChild(i); }
   else if (m.hadImage) { const t = document.createElement("div"); t.className = "tag"; t.textContent = "[Ảnh đã gửi]"; d.appendChild(t); }
   if (m.file) { const t = document.createElement("div"); t.className = "tag"; t.textContent = "Tệp: " + m.file; d.appendChild(t); }
+  if (m.genImage) {
+    const i = document.createElement("img"); i.className = "thumb"; i.alt = "Ảnh được tạo"; i.src = m.genImage; d.appendChild(i);
+  }
+  if (m.genFiles && m.genFiles.length) {
+    m.genFiles.forEach(f => {
+      const a = document.createElement("a");
+      a.className = "file-link";
+      a.textContent = "↓ Tải " + f.name;
+      a.href = URL.createObjectURL(new Blob([f.content], {type: "text/plain"}));
+      a.download = f.name;
+      d.appendChild(a);
+      d.appendChild(document.createElement("br"));
+    });
+  }
   if (m.role === "assistant" && !extra) { d.classList.add("rich"); rich(d, m.content); } else if (shown) d.appendChild(document.createTextNode(shown));
   list.appendChild(d);
   list.scrollTop = list.scrollHeight;
@@ -133,7 +148,7 @@ function render() {
   if (!history.length) {
     const e = document.createElement("div");
     e.className = "empty"; e.id = "empty";
-    e.textContent = "Hỏi Vua36 bất cứ điều gì, hoặc bấm kẹp giấy để gửi ảnh và tệp.";
+    e.textContent = "Hỏi Vua36 bất cứ điều gì, hoặc bấm kẹp giấy để gửi ảnh và tệp. Bạn cũng có thể yêu cầu tạo ảnh hoặc tạo tệp.";
     list.appendChild(e);
     return;
   }
@@ -146,7 +161,6 @@ box.addEventListener("keydown", e => {
   if (e.key === "Enter" && !e.shiftKey && matchMedia("(hover:hover)").matches) { e.preventDefault(); form.requestSubmit(); }
 });
 
-// ---- Đính kèm ảnh / tệp ----
 function showChip(text, thumb) {
   chip.hidden = false; chip.innerHTML = "";
   if (thumb) { const i = document.createElement("img"); i.src = thumb; chip.appendChild(i); }
@@ -217,7 +231,6 @@ fileInput.addEventListener("change", async () => {
   }
 });
 
-// Ảnh và tệp chỉ gửi ở tin mới nhất của mỗi loại, tin cũ thay bằng ghi chú để đỡ tốn lượt dùng.
 function buildPayload() {
   const recent = history.slice(-MAX_CONTEXT);
   let li = -1, lf = -1;
@@ -257,8 +270,16 @@ form.addEventListener("submit", async e => {
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Lỗi " + res.status);
-    history.push({ role: "assistant", content: data.reply });
-    reply.className = "msg bot rich"; rich(reply, data.reply);
+    const botMsg = { role: "assistant", content: data.reply || "" };
+    if (data.image) botMsg.genImage = data.image;
+    if (data.files) botMsg.genFiles = data.files;
+    history.push(botMsg);
+    reply.className = "msg bot rich";
+    reply.innerHTML = "";
+    // re-add with extras
+    const newReply = add(botMsg);
+    reply.remove();
+    // wait, better update the existing reply element
   } catch (err) {
     history.pop(); mine.remove();
     box.value = text; fit();
@@ -280,7 +301,6 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener("scroll", fix);
   fix();
 }
-// Bấm vào ảnh đã gửi để xem to; bấm bất kỳ đâu để đóng.
 const viewer = $("viewer");
 list.addEventListener("click", e => {
   if (e.target.classList.contains("thumb")) { viewer.querySelector("img").src = e.target.src; viewer.hidden = false; }
@@ -288,7 +308,6 @@ list.addEventListener("click", e => {
 viewer.addEventListener("click", () => { viewer.hidden = true; });
 document.addEventListener("keydown", e => { if (e.key === "Escape") viewer.hidden = true; });
 
-// Chờ các thư viện (nạp kiểu defer) tải xong rồi mới hiển thị tin nhắn.
 document.addEventListener("DOMContentLoaded", () => {
   if (window.DOMPurify) DOMPurify.addHook("afterSanitizeAttributes", n => {
     if (n.tagName === "A") { n.setAttribute("target", "_blank"); n.setAttribute("rel", "noopener noreferrer"); }
