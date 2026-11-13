@@ -4,33 +4,22 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="theme-color" content="#F2F5F7">
-<title>Trợ lý riêng</title>
+<title>Vua36</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&display=swap" rel="stylesheet">
 <style>
-:root{
-  --bg:#F2F5F7; --surface:#FFFFFF; --ink:#14202B; --muted:#667585; --line:#DCE3E9;
-  --accent:#3446D8; --on-accent:#FFFFFF; --err:#B42318;
-  color-scheme:light;
-}
-@media (prefers-color-scheme:dark){
-  :root{
-    --bg:#0E141B; --surface:#172029; --ink:#E8EEF3; --muted:#8FA0AF; --line:#26323D;
-    --accent:#8794FF; --on-accent:#0E141B; --err:#FF8A80;
-    color-scheme:dark;
-  }
-}
+:root{--bg:#F2F5F7;--surface:#fff;--ink:#14202B;--muted:#667585;--line:#DCE3E9;--accent:#3446D8;--on-accent:#fff;--err:#B42318;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0E141B;--surface:#172029;--ink:#E8EEF3;--muted:#8FA0AF;--line:#26323D;--accent:#8794FF;--on-accent:#0E141B;--err:#FF8A80;color-scheme:dark}}
 *{box-sizing:border-box}
 html,body{height:100%;margin:0}
 body{background:var(--bg);color:var(--ink);font:16px/1.55 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif}
 .app{height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto}
-header{display:flex;align-items:center;justify-content:space-between;
-  padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;border-bottom:1px solid var(--line)}
+header{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;border-bottom:1px solid var(--line)}
 h1{font-size:17px;font-weight:600;margin:0}
 .reset{font:inherit;font-size:14px;color:var(--muted);background:none;border:0;padding:8px 4px;cursor:pointer}
 #list{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
-.empty{margin:auto;color:var(--muted);text-align:center;max-width:26ch}
+.empty{margin:auto;color:var(--muted);text-align:center;max-width:28ch}
 .msg{max-width:86%;padding:10px 14px;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:18px}
 .me{align-self:flex-end;background:var(--accent);color:var(--on-accent);border-bottom-right-radius:5px}
 .bot{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:5px}
@@ -38,48 +27,63 @@ h1{font-size:17px;font-weight:600;margin:0}
 .wait{color:var(--muted);animation:pulse 1.2s ease-in-out infinite}
 @keyframes pulse{50%{opacity:.35}}
 @media (prefers-reduced-motion:reduce){.wait{animation:none}}
-form{display:flex;gap:8px;align-items:flex-end;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 10px);border-top:1px solid var(--line)}
-textarea{flex:1;resize:none;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);
-  border-radius:20px;padding:10px 14px;max-height:120px;min-height:44px}
-button.send{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:var(--on-accent);
-  display:grid;place-items:center;cursor:pointer}
-button.send:disabled{opacity:.4;cursor:default}
+.thumb{display:block;max-width:100%;max-height:220px;border-radius:12px;margin-bottom:6px}
+.tag{font-size:14px;opacity:.85;margin-bottom:4px}
+#chip{display:flex;align-items:center;gap:10px;margin:0 12px;padding:8px 12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;font-size:14px}
+#chip[hidden]{display:none}
+#chip img{width:40px;height:40px;object-fit:cover;border-radius:8px}
+#chip span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#chip button{background:none;border:0;color:var(--muted);font-size:20px;line-height:1;padding:4px 8px;cursor:pointer}
+form{display:flex;gap:8px;align-items:flex-end;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
+textarea{flex:1;resize:none;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:10px 14px;max-height:120px;min-height:44px}
+.round{flex:none;width:44px;height:44px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer}
+.attach{background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.send{background:var(--accent);color:var(--on-accent)}
+.send:disabled{opacity:.4;cursor:default}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 </style>
 </head>
 <body>
 <div class="app" id="app">
-  <header>
-    <h1>Trợ lý riêng</h1>
-    <button class="reset" id="reset" type="button">Cuộc trò chuyện mới</button>
-  </header>
+  <header><h1>Vua36</h1><button class="reset" id="reset" type="button">Cuộc trò chuyện mới</button></header>
   <div id="list" aria-live="polite"></div>
+  <div id="chip" hidden></div>
   <form id="form">
+    <button class="round attach" id="attach" type="button" aria-label="Đính kèm ảnh hoặc tệp">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 11l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.6-8.6a3.7 3.7 0 015.2 5.2l-8.6 8.6a1.8 1.8 0 01-2.6-2.6l7.9-7.9"/></svg>
+    </button>
+    <input id="file" type="file" hidden accept="image/*,.pdf,.txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,text/*">
     <textarea id="box" rows="1" placeholder="Nhập câu hỏi" aria-label="Tin nhắn"></textarea>
-    <button class="send" id="send" type="submit" aria-label="Gửi">
+    <button class="round send" id="send" type="submit" aria-label="Gửi">
       <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
     </button>
   </form>
 </div>
 <script>
-// Đổi link này nếu sau này bạn đổi tên Worker.
 const API_URL = "https://chatbotvua36.duong158209.workers.dev";
-const MAX_CONTEXT = 20; // chỉ gửi 20 tin gần nhất để đỡ tốn lượt dùng
-
-const list = document.getElementById("list");
-const box = document.getElementById("box");
-const send = document.getElementById("send");
-const form = document.getElementById("form");
-let history = [];
-let busy = false;
+const MAX_CONTEXT = 20;
+const MAX_FILE_CHARS = 8000;
+const $ = id => document.getElementById(id);
+const list = $("list"), box = $("box"), send = $("send"), form = $("form"), chip = $("chip"), fileInput = $("file");
+let history = [], busy = false, pending = null;
 
 try { history = JSON.parse(localStorage.getItem("chat") || "[]"); } catch (e) {}
-function save() { try { localStorage.setItem("chat", JSON.stringify(history)); } catch (e) {} }
+function save() {
+  try {
+    localStorage.setItem("chat", JSON.stringify(history.map(m => ({
+      role: m.role, content: m.content, caption: m.caption, file: m.file, hadImage: !!(m.image || m.hadImage)
+    }))));
+  } catch (e) {}
+}
 
-function add(role, text, extra) {
+function add(m, extra) {
   const d = document.createElement("div");
-  d.className = "msg " + (role === "user" ? "me" : "bot") + (extra ? " " + extra : "");
-  d.textContent = text;
+  d.className = "msg " + (m.role === "user" ? "me" : "bot") + (extra ? " " + extra : "");
+  const shown = m.role === "user" ? (m.caption || "") : m.content;
+  if (m.image) { const i = document.createElement("img"); i.className = "thumb"; i.src = m.image; d.appendChild(i); }
+  else if (m.hadImage) { const t = document.createElement("div"); t.className = "tag"; t.textContent = "[Ảnh đã gửi]"; d.appendChild(t); }
+  if (m.file) { const t = document.createElement("div"); t.className = "tag"; t.textContent = "Tệp: " + m.file; d.appendChild(t); }
+  if (shown) d.appendChild(document.createTextNode(shown));
   list.appendChild(d);
   list.scrollTop = list.scrollHeight;
   return d;
@@ -89,84 +93,154 @@ function render() {
   list.innerHTML = "";
   if (!history.length) {
     const e = document.createElement("div");
-    e.className = "empty";
-    e.id = "empty";
-    e.textContent = "Nhập câu hỏi ở dưới để bắt đầu trò chuyện.";
+    e.className = "empty"; e.id = "empty";
+    e.textContent = "Hỏi Vua36 bất cứ điều gì, hoặc bấm kẹp giấy để gửi ảnh và tệp.";
     list.appendChild(e);
     return;
   }
-  history.forEach(m => add(m.role, m.content));
+  history.forEach(m => add(m));
 }
 
-function fit() {
-  box.style.height = "auto";
-  box.style.height = Math.min(box.scrollHeight, 120) + "px";
-}
+function fit() { box.style.height = "auto"; box.style.height = Math.min(box.scrollHeight, 120) + "px"; }
 box.addEventListener("input", fit);
-
-// Máy tính: Enter để gửi, Shift+Enter xuống dòng. Điện thoại: Enter xuống dòng, bấm nút để gửi.
 box.addEventListener("keydown", e => {
-  if (e.key === "Enter" && !e.shiftKey && matchMedia("(hover:hover)").matches) {
-    e.preventDefault();
-    form.requestSubmit();
+  if (e.key === "Enter" && !e.shiftKey && matchMedia("(hover:hover)").matches) { e.preventDefault(); form.requestSubmit(); }
+});
+
+// ---- Đính kèm ảnh / tệp ----
+function showChip(text, thumb) {
+  chip.hidden = false; chip.innerHTML = "";
+  if (thumb) { const i = document.createElement("img"); i.src = thumb; chip.appendChild(i); }
+  const s = document.createElement("span"); s.textContent = text; chip.appendChild(s);
+  const b = document.createElement("button"); b.type = "button"; b.textContent = "×"; b.setAttribute("aria-label", "Bỏ đính kèm");
+  b.onclick = () => { pending = null; chip.hidden = true; };
+  chip.appendChild(b);
+}
+function showPending() {
+  if (!pending) { chip.hidden = true; return; }
+  showChip(pending.name + (pending.truncated ? " (đã cắt bớt)" : ""), pending.type === "image" ? pending.dataUrl : null);
+}
+
+$("attach").addEventListener("click", () => fileInput.click());
+
+function shrink(file) {
+  const url = URL.createObjectURL(file);
+  return new Promise((ok, no) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      ok(c.toDataURL("image/jpeg", 0.8));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); no(new Error("Không đọc được ảnh này")); };
+    img.src = url;
+  });
+}
+
+function loadScript(src) {
+  return new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = () => no(new Error("Không tải được bộ đọc PDF")); document.head.appendChild(s); });
+}
+async function readPdf(file) {
+  const base = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  if (!window.pdfjsLib) await loadScript(base + "pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = base + "pdf.worker.min.js";
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  let out = "";
+  for (let p = 1; p <= pdf.numPages && out.length < MAX_FILE_CHARS; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    out += tc.items.map(i => i.str).join(" ") + "\n";
+  }
+  if (!out.trim()) throw new Error("PDF này không có chữ để đọc (có thể là bản scan)");
+  return out;
+}
+
+fileInput.addEventListener("change", async () => {
+  const f = fileInput.files[0];
+  fileInput.value = "";
+  if (!f) return;
+  showChip("Đang đọc " + f.name + "…");
+  try {
+    if (f.type.startsWith("image/")) {
+      pending = { type: "image", name: f.name, dataUrl: await shrink(f) };
+    } else {
+      const raw = (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) ? await readPdf(f) : await f.text();
+      const bad = (raw.slice(0, 2000).match(/\uFFFD/g) || []).length;
+      if (bad > 20) throw new Error("Tệp này không phải dạng chữ");
+      pending = { type: "text", name: f.name, text: raw.slice(0, MAX_FILE_CHARS), truncated: raw.length > MAX_FILE_CHARS };
+    }
+    showPending();
+  } catch (err) {
+    pending = null;
+    showChip("Không đọc được tệp: " + (err.message || err));
   }
 });
+
+// Ảnh và tệp chỉ gửi ở tin mới nhất của mỗi loại, tin cũ thay bằng ghi chú để đỡ tốn lượt dùng.
+function buildPayload() {
+  const recent = history.slice(-MAX_CONTEXT);
+  let li = -1, lf = -1;
+  recent.forEach((m, i) => { if (m.image) li = i; if (m.file) lf = i; });
+  return recent.map((m, i) => {
+    let text = m.content;
+    if (m.file && i !== lf) text = "[Tệp đính kèm: " + m.file + ", nội dung đã gửi ở tin trước]" + (m.caption ? "\n" + m.caption : "");
+    if (m.image && i === li) return { role: m.role, content: [{ type: "text", text: text || "Hãy mô tả ảnh này." }, { type: "image_url", image_url: { url: m.image } }] };
+    if (m.image || m.hadImage) text = (text ? text + "\n" : "") + "[ảnh đã gửi trước đó]";
+    return { role: m.role, content: text };
+  });
+}
 
 form.addEventListener("submit", async e => {
   e.preventDefault();
   const text = box.value.trim();
-  if (!text || busy) return;
-  busy = true;
-  send.disabled = true;
-  const empty = document.getElementById("empty");
-  if (empty) empty.remove();
+  if ((!text && !pending) || busy) return;
+  busy = true; send.disabled = true;
+  const empty = $("empty"); if (empty) empty.remove();
 
-  history.push({ role: "user", content: text });
-  const mine = add("user", text);
-  box.value = "";
-  fit();
-  const reply = add("assistant", "Đang trả lời…", "wait");
+  const att = pending;
+  const m = { role: "user", content: text, caption: text };
+  if (att && att.type === "image") m.image = att.dataUrl;
+  if (att && att.type === "text") {
+    m.file = att.name;
+    m.content = "[Tệp đính kèm: " + att.name + (att.truncated ? ", đã cắt bớt vì quá dài" : "") + "]\n```\n" + att.text + "\n```\n\n" + (text || "Hãy tóm tắt tệp này.");
+  }
+  history.push(m);
+  const mine = add(m);
+  pending = null; chip.hidden = true; box.value = ""; fit();
+  const reply = add({ role: "assistant", content: att && att.type === "image" ? "Đang xem ảnh…" : "Đang trả lời…" }, "wait");
 
   try {
     const res = await fetch(API_URL, {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({ messages: history.slice(-MAX_CONTEXT) })
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messages: buildPayload() })
     });
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Lỗi " + res.status);
     history.push({ role: "assistant", content: data.reply });
-    reply.className = "msg bot";
-    reply.textContent = data.reply;
+    reply.className = "msg bot"; reply.textContent = data.reply;
   } catch (err) {
-    history.pop();   // bỏ tin vừa gửi lỗi để bấm gửi lại không bị trùng
-    mine.remove();
-    box.value = text;
-    fit();
+    history.pop(); mine.remove();
+    box.value = text; fit();
+    pending = att; showPending();
     reply.className = "msg bot err";
-    reply.textContent = "Không gửi được: " + (err.message || err) + ". Tin nhắn của bạn vẫn còn trong ô nhập, bấm gửi để thử lại.";
+    reply.textContent = "Không gửi được: " + (err.message || err) + ". Tin nhắn và tệp đính kèm vẫn còn, bấm gửi để thử lại.";
   }
   save();
   list.scrollTop = list.scrollHeight;
-  busy = false;
-  send.disabled = false;
+  busy = false; send.disabled = false;
 });
 
-document.getElementById("reset").addEventListener("click", () => {
-  history = [];
-  save();
-  render();
-});
+$("reset").addEventListener("click", () => { history = []; pending = null; chip.hidden = true; save(); render(); });
 
-// Giữ ô nhập luôn nằm trên bàn phím iPhone.
 if (window.visualViewport) {
-  const app = document.getElementById("app");
+  const app = $("app");
   const fix = () => { app.style.height = window.visualViewport.height + "px"; window.scrollTo(0, 0); };
   window.visualViewport.addEventListener("resize", fix);
   window.visualViewport.addEventListener("scroll", fix);
   fix();
 }
-
 render();
 </script>
 </body>
