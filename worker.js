@@ -185,6 +185,9 @@ export default {
       }
 
       let reply = await callModel(messages, env);
+      // Xóa các tag lạ như [TIMER]...[/TIMER]
+      reply = reply.replace(/\[TIMER\][^\[]*\[\/TIMER\]/gi, "").trim();
+      reply = reply.replace(/\[[A-Z_]+\][^\[]*\[\/[A-Z_]+\]/gi, "").trim();
       const { clean, images, files } = extractSpecials(reply);
       reply = clean || reply;
 
