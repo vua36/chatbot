@@ -131,13 +131,14 @@ function add(m, extra) {
       const a = document.createElement("a");
       a.className = "file-link";
       a.textContent = "↓ Tải " + f.name;
-      a.href = URL.createObjectURL(new Blob([f.content], {type: "text/plain"}));
+      const blob = new Blob([f.content], {type: "text/plain;charset=utf-8"});
+      a.href = URL.createObjectURL(blob);
       a.download = f.name;
       d.appendChild(a);
       d.appendChild(document.createElement("br"));
     });
   }
-  if (m.role === "assistant" && !extra) { d.classList.add("rich"); rich(d, m.content); } else if (shown) d.appendChild(document.createTextNode(shown));
+  if (m.role === "assistant" && !extra) { d.classList.add("rich"); rich(d, m.content || ""); } else if (shown) d.appendChild(document.createTextNode(shown));
   list.appendChild(d);
   list.scrollTop = list.scrollHeight;
   return d;
@@ -261,7 +262,7 @@ form.addEventListener("submit", async e => {
   history.push(m);
   const mine = add(m);
   pending = null; chip.hidden = true; box.value = ""; fit();
-  const reply = add({ role: "assistant", content: att && att.type === "image" ? "Đang xem ảnh…" : "Đang trả lời…" }, "wait");
+  const replyEl = add({ role: "assistant", content: att && att.type === "image" ? "Đang xem ảnh…" : "Đang trả lời…" }, "wait");
 
   try {
     const res = await fetch(API_URL, {
@@ -274,18 +275,32 @@ form.addEventListener("submit", async e => {
     if (data.image) botMsg.genImage = data.image;
     if (data.files) botMsg.genFiles = data.files;
     history.push(botMsg);
-    reply.className = "msg bot rich";
-    reply.innerHTML = "";
-    // re-add with extras
-    const newReply = add(botMsg);
-    reply.remove();
-    // wait, better update the existing reply element
+    // Update the waiting element
+    replyEl.className = "msg bot rich";
+    replyEl.innerHTML = "";
+    // Manually rebuild content in replyEl
+    if (botMsg.genImage) {
+      const i = document.createElement("img"); i.className = "thumb"; i.alt = "Ảnh được tạo"; i.src = botMsg.genImage; replyEl.appendChild(i);
+    }
+    if (botMsg.genFiles && botMsg.genFiles.length) {
+      botMsg.genFiles.forEach(f => {
+        const a = document.createElement("a");
+        a.className = "file-link";
+        a.textContent = "↓ Tải " + f.name;
+        const blob = new Blob([f.content], {type: "text/plain;charset=utf-8"});
+        a.href = URL.createObjectURL(blob);
+        a.download = f.name;
+        replyEl.appendChild(a);
+        replyEl.appendChild(document.createElement("br"));
+      });
+    }
+    rich(replyEl, botMsg.content || "");
   } catch (err) {
     history.pop(); mine.remove();
     box.value = text; fit();
     pending = att; showPending();
-    reply.className = "msg bot err";
-    reply.textContent = "Không gửi được: " + (err.message || err) + ". Tin nhắn và tệp đính kèm vẫn còn, bấm gửi để thử lại.";
+    replyEl.className = "msg bot err";
+    replyEl.textContent = "Không gửi được: " + (err.message || err) + ". Tin nhắn và tệp đính kèm vẫn còn, bấm gửi để thử lại.";
   }
   save();
   list.scrollTop = list.scrollHeight;
