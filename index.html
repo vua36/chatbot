@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2F5F7">
+<title>Trợ lý riêng</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#F2F5F7; --surface:#FFFFFF; --ink:#14202B; --muted:#667585; --line:#DCE3E9;
+  --accent:#3446D8; --on-accent:#FFFFFF; --err:#B42318;
+  color-scheme:light;
+}
+@media (prefers-color-scheme:dark){
+  :root{
+    --bg:#0E141B; --surface:#172029; --ink:#E8EEF3; --muted:#8FA0AF; --line:#26323D;
+    --accent:#8794FF; --on-accent:#0E141B; --err:#FF8A80;
+    color-scheme:dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif}
+.app{height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;
+  padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;border-bottom:1px solid var(--line)}
+h1{font-size:17px;font-weight:600;margin:0}
+.reset{font:inherit;font-size:14px;color:var(--muted);background:none;border:0;padding:8px 4px;cursor:pointer}
+#list{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+.empty{margin:auto;color:var(--muted);text-align:center;max-width:26ch}
+.msg{max-width:86%;padding:10px 14px;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:18px}
+.me{align-self:flex-end;background:var(--accent);color:var(--on-accent);border-bottom-right-radius:5px}
+.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:5px}
+.err{color:var(--err)}
+.wait{color:var(--muted);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+@media (prefers-reduced-motion:reduce){.wait{animation:none}}
+form{display:flex;gap:8px;align-items:flex-end;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 10px);border-top:1px solid var(--line)}
+textarea{flex:1;resize:none;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);
+  border-radius:20px;padding:10px 14px;max-height:120px;min-height:44px}
+button.send{flex:none;width:44px;height:44px;border-radius:50%;border:0;background:var(--accent);color:var(--on-accent);
+  display:grid;place-items:center;cursor:pointer}
+button.send:disabled{opacity:.4;cursor:default}
+:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+</style>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <h1>Trợ lý riêng</h1>
+    <button class="reset" id="reset" type="button">Cuộc trò chuyện mới</button>
+  </header>
+  <div id="list" aria-live="polite"></div>
+  <form id="form">
+    <textarea id="box" rows="1" placeholder="Nhập câu hỏi" aria-label="Tin nhắn"></textarea>
+    <button class="send" id="send" type="submit" aria-label="Gửi">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    </button>
+  </form>
+</div>
+<script>
+// Đổi link này nếu sau này bạn đổi tên Worker.
+const API_URL = "https://chatbotvua36.duong158209.workers.dev";
+const MAX_CONTEXT = 20; // chỉ gửi 20 tin gần nhất để đỡ tốn lượt dùng
+
+const list = document.getElementById("list");
+const box = document.getElementById("box");
+const send = document.getElementById("send");
+const form = document.getElementById("form");
+let history = [];
+let busy = false;
+
+try { history = JSON.parse(localStorage.getItem("chat") || "[]"); } catch (e) {}
+function save() { try { localStorage.setItem("chat", JSON.stringify(history)); } catch (e) {} }
+
+function add(role, text, extra) {
+  const d = document.createElement("div");
+  d.className = "msg " + (role === "user" ? "me" : "bot") + (extra ? " " + extra : "");
+  d.textContent = text;
+  list.appendChild(d);
+  list.scrollTop = list.scrollHeight;
+  return d;
+}
+
+function render() {
+  list.innerHTML = "";
+  if (!history.length) {
+    const e = document.createElement("div");
+    e.className = "empty";
+    e.id = "empty";
+    e.textContent = "Nhập câu hỏi ở dưới để bắt đầu trò chuyện.";
+    list.appendChild(e);
+    return;
+  }
+  history.forEach(m => add(m.role, m.content));
+}
+
+function fit() {
+  box.style.height = "auto";
+  box.style.height = Math.min(box.scrollHeight, 120) + "px";
+}
+box.addEventListener("input", fit);
+
+// Máy tính: Enter để gửi, Shift+Enter xuống dòng. Điện thoại: Enter xuống dòng, bấm nút để gửi.
+box.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && matchMedia("(hover:hover)").matches) {
+    e.preventDefault();
+    form.requestSubmit();
+  }
+});
+
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  const text = box.value.trim();
+  if (!text || busy) return;
+  busy = true;
+  send.disabled = true;
+  const empty = document.getElementById("empty");
+  if (empty) empty.remove();
+
+  history.push({ role: "user", content: text });
+  const mine = add("user", text);
+  box.value = "";
+  fit();
+  const reply = add("assistant", "Đang trả lời…", "wait");
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messages: history.slice(-MAX_CONTEXT) })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Lỗi " + res.status);
+    history.push({ role: "assistant", content: data.reply });
+    reply.className = "msg bot";
+    reply.textContent = data.reply;
+  } catch (err) {
+    history.pop();   // bỏ tin vừa gửi lỗi để bấm gửi lại không bị trùng
+    mine.remove();
+    box.value = text;
+    fit();
+    reply.className = "msg bot err";
+    reply.textContent = "Không gửi được: " + (err.message || err) + ". Tin nhắn của bạn vẫn còn trong ô nhập, bấm gửi để thử lại.";
+  }
+  save();
+  list.scrollTop = list.scrollHeight;
+  busy = false;
+  send.disabled = false;
+});
+
+document.getElementById("reset").addEventListener("click", () => {
+  history = [];
+  save();
+  render();
+});
+
+// Giữ ô nhập luôn nằm trên bàn phím iPhone.
+if (window.visualViewport) {
+  const app = document.getElementById("app");
+  const fix = () => { app.style.height = window.visualViewport.height + "px"; window.scrollTo(0, 0); };
+  window.visualViewport.addEventListener("resize", fix);
+  window.visualViewport.addEventListener("scroll", fix);
+  fix();
+}
+
+render();
+</script>
+</body>
+</html>
