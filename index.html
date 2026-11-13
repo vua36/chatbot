@@ -275,10 +275,8 @@ form.addEventListener("submit", async e => {
     if (data.image) botMsg.genImage = data.image;
     if (data.files) botMsg.genFiles = data.files;
     history.push(botMsg);
-    // Update the waiting element
     replyEl.className = "msg bot rich";
     replyEl.innerHTML = "";
-    // Manually rebuild content in replyEl
     if (botMsg.genImage) {
       const i = document.createElement("img"); i.className = "thumb"; i.alt = "Ảnh được tạo"; i.src = botMsg.genImage; replyEl.appendChild(i);
     }
