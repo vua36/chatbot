@@ -1,1 +1,374 @@
-PLACEHOLDER
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#F2F5F7">
+<title>Vua36</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#F2F5F7;--surface:#fff;--ink:#14202B;--muted:#667585;--line:#DCE3E9;--accent:#3446D8;--on-accent:#fff;--err:#B42318;color-scheme:light}
+@media (prefers-color-scheme:dark){:root{--bg:#0E141B;--surface:#172029;--ink:#E8EEF3;--muted:#8FA0AF;--line:#26323D;--accent:#8794FF;--on-accent:#0E141B;--err:#FF8A80;color-scheme:dark}}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font:16px/1.55 "Be Vietnam Pro",system-ui,-apple-system,"Segoe UI",sans-serif}
+.app{height:100%;display:flex;flex-direction:column;max-width:720px;margin:0 auto}
+header{display:flex;align-items:center;justify-content:space-between;padding:calc(env(safe-area-inset-top,0px) + 10px) 16px 10px;border-bottom:1px solid var(--line)}
+h1{font-size:17px;font-weight:600;margin:0}
+.header-btns{display:flex;gap:8px}
+.reset,.hist{font:inherit;font-size:14px;color:var(--muted);background:none;border:0;padding:8px 4px;cursor:pointer}
+#list{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;-webkit-overflow-scrolling:touch}
+.empty{margin:auto;color:var(--muted);text-align:center;max-width:28ch}
+.msg{max-width:86%;padding:10px 14px;white-space:pre-wrap;overflow-wrap:anywhere;border-radius:18px}
+.me{align-self:flex-end;background:var(--accent);color:var(--on-accent);border-bottom-right-radius:5px}
+.bot{align-self:flex-start;background:var(--surface);border:1px solid var(--line);border-bottom-left-radius:5px}
+.err{color:var(--err)}
+.wait{color:var(--muted);animation:pulse 1.2s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.35}}
+.thumb{display:block;max-width:100%;max-height:220px;border-radius:12px;margin-bottom:6px}
+.tag{font-size:14px;opacity:.85;margin-bottom:4px}
+.file-link{display:inline-block;margin:4px 0;padding:6px 10px;background:var(--bg);border:1px solid var(--line);border-radius:8px;font-size:14px;text-decoration:none;color:var(--accent)}
+#chip{display:flex;align-items:center;gap:10px;margin:0 12px;padding:8px 12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;font-size:14px}
+#chip[hidden]{display:none}
+#chip img{width:40px;height:40px;object-fit:cover;border-radius:8px}
+#chip span{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#chip button{background:none;border:0;color:var(--muted);font-size:20px;line-height:1;padding:4px 8px;cursor:pointer}
+form{display:flex;gap:8px;align-items:flex-end;padding:10px 12px calc(env(safe-area-inset-bottom,0px) + 10px)}
+textarea{flex:1;resize:none;font:inherit;color:inherit;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:10px 14px;max-height:120px;min-height:44px}
+.round{flex:none;width:44px;height:44px;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer}
+.attach{background:var(--surface);border:1px solid var(--line);color:var(--muted)}
+.send{background:var(--accent);color:var(--on-accent)}
+.send:disabled{opacity:.4;cursor:default}
+.rich{white-space:normal}
+.rich>:first-child{margin-top:0}.rich>:last-child{margin-bottom:0}
+.rich p{margin:.5em 0}.rich ul,.rich ol{margin:.5em 0;padding-left:1.3em}
+.rich h1,.rich h2,.rich h3{font-size:1em;font-weight:600;margin:.8em 0 .3em}
+.rich pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;overflow-x:auto;font-size:14px;white-space:pre}
+.rich code{font-family:ui-monospace,Menlo,monospace;font-size:.9em}
+.rich a{color:var(--accent)}
+#viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:10}
+#viewer[hidden]{display:none}
+#viewer img{max-width:100%;max-height:100%;object-fit:contain}
+#viewer button{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:16px;background:none;border:0;color:#fff;font-size:32px;line-height:1;padding:8px}
+#history-panel{position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:20;display:flex;align-items:flex-end}
+#history-panel[hidden]{display:none}
+.hist-box{background:var(--surface);width:100%;max-height:70%;border-radius:16px 16px 0 0;padding:16px;overflow-y:auto}
+.hist-item{padding:12px;border-bottom:1px solid var(--line);cursor:pointer}
+.hist-item:active{background:var(--bg)}
+</style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
+</head>
+<body>
+<div class="app" id="app">
+  <header>
+    <h1>Vua36</h1>
+    <div class="header-btns">
+      <button class="hist" id="histBtn" type="button">Lịch sử</button>
+      <button class="reset" id="reset" type="button">Mới</button>
+    </div>
+  </header>
+  <div id="list" aria-live="polite"></div>
+  <div id="chip" hidden></div>
+  <form id="form">
+    <button class="round attach" id="attach" type="button" aria-label="Đính kèm">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 11l-8.6 8.6a5.5 5.5 0 01-7.8-7.8l8.6-8.6a3.7 3.7 0 015.2 5.2l-8.6 8.6a1.8 1.8 0 01-2.6-2.6l7.9-7.9"/></svg>
+    </button>
+    <input id="file" type="file" hidden accept="image/*,.pdf,.txt,.md,.csv,.json,.js,.ts,.py,.html,.css,.xml,.log,text/*">
+    <textarea id="box" rows="1" placeholder="Nhập câu hỏi" aria-label="Tin nhắn"></textarea>
+    <button class="round send" id="send" type="submit" aria-label="Gửi">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+    </button>
+  </form>
+</div>
+<div id="viewer" hidden><button type="button" aria-label="Đóng">×</button><img alt="Ảnh"></div>
+<div id="history-panel" hidden>
+  <div class="hist-box" id="histList"></div>
+</div>
+<script>
+const API_URL = "https://chatbotvua36.duong158209.workers.dev";
+const MAX_CONTEXT = 30;
+const MAX_FILE_CHARS = 15000;
+const $ = id => document.getElementById(id);
+const list = $("list"), box = $("box"), send = $("send"), form = $("form"), chip = $("chip"), fileInput = $("file");
+let history = [], busy = false, pending = null, currentId = null;
+let allChats = [];
+
+const esc = s => String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+
+function rich(el, src) {
+  if (!(window.marked && window.DOMPurify)) { el.textContent = src; return; }
+  const math = [];
+  const stash = (t, display) => "@@M" + (math.push([t, display]) - 1) + "@@";
+  const s = src.split(/(```[\s\S]*?```|`[^`\n]*`)/g).map((part, i) => i % 2 ? part : part
+    .replace(/\$\$([\s\S]+?)\$\$/g, (_, t) => stash(t, true))
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_, t) => stash(t, true))
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_, t) => stash(t, false))
+    .replace(/\$(?!\s)([^\n$]*?[^\s$])\$/g, (_, t) => stash(t, false))).join("");
+  const html = DOMPurify.sanitize(marked.parse(s, { breaks: true }));
+  el.innerHTML = html.replace(/@@M(\d+)@@/g, (_, i) => {
+    const [t, display] = math[+i];
+    try { return window.katex ? katex.renderToString(t, { displayMode: display, throwOnError: false }) : esc(t); }
+    catch (e) { return esc(t); }
+  });
+}
+
+function loadChats() {
+  try { allChats = JSON.parse(localStorage.getItem("chats") || "[]"); } catch(e) { allChats = []; }
+  if (!allChats.length) {
+    currentId = Date.now().toString();
+    allChats = [{id: currentId, title: "Cuộc mới", messages: [], updated: Date.now()}];
+  } else {
+    currentId = allChats[0].id;
+    history = allChats[0].messages || [];
+  }
+}
+function saveChats() {
+  const idx = allChats.findIndex(c => c.id === currentId);
+  const title = history.find(m => m.role === "user")?.caption?.slice(0, 40) || "Cuộc mới";
+  const chat = {id: currentId, title, messages: history, updated: Date.now()};
+  if (idx >= 0) allChats[idx] = chat; else allChats.unshift(chat);
+  allChats = allChats.slice(0, 50);
+  localStorage.setItem("chats", JSON.stringify(allChats));
+}
+
+function add(m, extra) {
+  const d = document.createElement("div");
+  d.className = "msg " + (m.role === "user" ? "me" : "bot") + (extra ? " " + extra : "");
+  const shown = m.role === "user" ? (m.caption || "") : m.content;
+  if (m.image || m.thumb) { const i = document.createElement("img"); i.className = "thumb"; i.src = m.image || m.thumb; d.appendChild(i); }
+  else if (m.hadImage) { const t = document.createElement("div"); t.className = "tag"; t.textContent = "[Ảnh đã gửi]"; d.appendChild(t); }
+  if (m.file) { const t = document.createElement("div"); t.className = "tag"; t.textContent = "Tệp: " + m.file; d.appendChild(t); }
+  if (m.genImage) {
+    const i = document.createElement("img"); i.className = "thumb"; i.src = m.genImage; d.appendChild(i);
+  }
+  if (m.genFiles && m.genFiles.length) {
+    m.genFiles.forEach(f => {
+      const a = document.createElement("a");
+      a.className = "file-link";
+      a.textContent = "↓ Tải " + f.name;
+      a.href = URL.createObjectURL(new Blob([f.content], {type: "text/plain"}));
+      a.download = f.name;
+      d.appendChild(a);
+      d.appendChild(document.createElement("br"));
+    });
+  }
+  if (m.role === "assistant" && !extra) { d.classList.add("rich"); rich(d, m.content || ""); }
+  else if (shown) d.appendChild(document.createTextNode(shown));
+  list.appendChild(d);
+  list.scrollTop = list.scrollHeight;
+  return d;
+}
+
+function render() {
+  list.innerHTML = "";
+  if (!history.length) {
+    const e = document.createElement("div");
+    e.className = "empty"; e.id = "empty";
+    e.textContent = "Hỏi Vua36 bất cứ điều gì. Có thể hỏi code game, ESP, wallhack... bạn sẽ trả lời.";
+    list.appendChild(e);
+    return;
+  }
+  history.forEach(m => add(m));
+}
+
+function showHistory() {
+  const panel = $("history-panel");
+  const box = $("histList");
+  box.innerHTML = "<h3 style='margin:0 0 12px'>Lịch sử chat</h3>";
+  allChats.forEach(c => {
+    const d = document.createElement("div");
+    d.className = "hist-item";
+    d.textContent = c.title + " • " + new Date(c.updated).toLocaleString("vi");
+    d.onclick = () => {
+      currentId = c.id;
+      history = c.messages || [];
+      panel.hidden = true;
+      render();
+    };
+    box.appendChild(d);
+  });
+  panel.hidden = false;
+}
+
+function fit() { box.style.height = "auto"; box.style.height = Math.min(box.scrollHeight, 120) + "px"; }
+box.addEventListener("input", fit);
+box.addEventListener("keydown", e => {
+  if (e.key === "Enter" && !e.shiftKey && matchMedia("(hover:hover)").matches) { e.preventDefault(); form.requestSubmit(); }
+});
+
+function showChip(text, thumb) {
+  chip.hidden = false; chip.innerHTML = "";
+  if (thumb) { const i = document.createElement("img"); i.src = thumb; chip.appendChild(i); }
+  const s = document.createElement("span"); s.textContent = text; chip.appendChild(s);
+  const b = document.createElement("button"); b.type = "button"; b.textContent = "×";
+  b.onclick = () => { pending = null; chip.hidden = true; };
+  chip.appendChild(b);
+}
+function showPending() {
+  if (!pending) { chip.hidden = true; return; }
+  showChip(pending.name + (pending.truncated ? " (đã cắt)" : ""), pending.type === "image" ? pending.dataUrl : null);
+}
+
+$("attach").addEventListener("click", () => fileInput.click());
+
+function shrink(file, max = 1280, q = 0.8) {
+  const url = URL.createObjectURL(file);
+  return new Promise((ok, no) => {
+    const img = new Image();
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+      const c = document.createElement("canvas");
+      c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
+      c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url);
+      ok(c.toDataURL("image/jpeg", q));
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); no(new Error("Không đọc được ảnh")); };
+    img.src = url;
+  });
+}
+
+function loadScript(src) {
+  return new Promise((ok, no) => { const s = document.createElement("script"); s.src = src; s.onload = ok; s.onerror = no; document.head.appendChild(s); });
+}
+async function readPdf(file) {
+  const base = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/";
+  if (!window.pdfjsLib) await loadScript(base + "pdf.min.js");
+  pdfjsLib.GlobalWorkerOptions.workerSrc = base + "pdf.worker.min.js";
+  const pdf = await pdfjsLib.getDocument({ data: await file.arrayBuffer() }).promise;
+  let out = "";
+  for (let p = 1; p <= pdf.numPages && out.length < MAX_FILE_CHARS; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    out += tc.items.map(i => i.str).join(" ") + "\n";
+  }
+  return out || "(PDF không có text)";
+}
+
+fileInput.addEventListener("change", async () => {
+  const f = fileInput.files[0];
+  fileInput.value = "";
+  if (!f) return;
+  showChip("Đang đọc " + f.name + "…");
+  try {
+    if (f.type.startsWith("image/")) {
+      pending = { type: "image", name: f.name, dataUrl: await shrink(f), thumb: await shrink(f, 640, 0.7) };
+    } else {
+      const raw = (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) ? await readPdf(f) : await f.text();
+      pending = { type: "text", name: f.name, text: raw.slice(0, MAX_FILE_CHARS), truncated: raw.length > MAX_FILE_CHARS };
+    }
+    showPending();
+  } catch (err) {
+    pending = null;
+    showChip("Lỗi: " + (err.message || err));
+  }
+});
+
+function buildPayload() {
+  const recent = history.slice(-MAX_CONTEXT);
+  let li = -1, lf = -1;
+  recent.forEach((m, i) => { if (m.image) li = i; if (m.file) lf = i; });
+  return recent.map((m, i) => {
+    let text = m.content;
+    if (m.file && i !== lf) text = "[Tệp: " + m.file + "]" + (m.caption ? "\n" + m.caption : "");
+    if (m.image && i === li) return { role: m.role, content: [{ type: "text", text: text || "Mô tả ảnh này." }, { type: "image_url", image_url: { url: m.image } }] };
+    if (m.image || m.hadImage) text = (text ? text + "\n" : "") + "[ảnh trước]";
+    return { role: m.role, content: text };
+  });
+}
+
+form.addEventListener("submit", async e => {
+  e.preventDefault();
+  const text = box.value.trim();
+  if ((!text && !pending) || busy) return;
+  busy = true; send.disabled = true;
+  const empty = $("empty"); if (empty) empty.remove();
+
+  const att = pending;
+  const m = { role: "user", content: text, caption: text };
+  if (att && att.type === "image") { m.image = att.dataUrl; m.thumb = att.thumb; }
+  if (att && att.type === "text") {
+    m.file = att.name;
+    m.content = "[Tệp: " + att.name + "]\n```\n" + att.text + "\n```\n\n" + (text || "Tóm tắt tệp này.");
+  }
+  history.push(m);
+  const mine = add(m);
+  pending = null; chip.hidden = true; box.value = ""; fit();
+  const replyEl = add({ role: "assistant", content: "Đang trả lời…" }, "wait");
+
+  try {
+    const res = await fetch(API_URL, {
+      method: "POST", headers: { "content-type": "application/json" },
+      body: JSON.stringify({ messages: buildPayload() })
+    });
+    const data = await res.json();
+    if (!res.ok || data.error) throw new Error(data.error || "Lỗi " + res.status);
+    const botMsg = { role: "assistant", content: data.reply || "" };
+    if (data.image) botMsg.genImage = data.image;
+    if (data.files) botMsg.genFiles = data.files;
+    history.push(botMsg);
+    replyEl.className = "msg bot rich";
+    replyEl.innerHTML = "";
+    if (botMsg.genImage) {
+      const i = document.createElement("img"); i.className = "thumb"; i.src = botMsg.genImage; replyEl.appendChild(i);
+    }
+    if (botMsg.genFiles) {
+      botMsg.genFiles.forEach(f => {
+        const a = document.createElement("a");
+        a.className = "file-link"; a.textContent = "↓ Tải " + f.name;
+        a.href = URL.createObjectURL(new Blob([f.content], {type: "text/plain"}));
+        a.download = f.name;
+        replyEl.appendChild(a); replyEl.appendChild(document.createElement("br"));
+      });
+    }
+    rich(replyEl, botMsg.content || "");
+  } catch (err) {
+    history.pop(); mine.remove();
+    box.value = text; fit();
+    pending = att; showPending();
+    replyEl.className = "msg bot err";
+    replyEl.textContent = "Lỗi: " + (err.message || err);
+  }
+  saveChats();
+  list.scrollTop = list.scrollHeight;
+  busy = false; send.disabled = false;
+});
+
+$("reset").addEventListener("click", () => {
+  currentId = Date.now().toString();
+  history = [];
+  pending = null; chip.hidden = true;
+  saveChats();
+  render();
+});
+
+$("histBtn").addEventListener("click", showHistory);
+$("history-panel").addEventListener("click", e => {
+  if (e.target.id === "history-panel") e.target.hidden = true;
+});
+
+if (window.visualViewport) {
+  const app = $("app");
+  const fix = () => { app.style.height = window.visualViewport.height + "px"; window.scrollTo(0, 0); };
+  window.visualViewport.addEventListener("resize", fix);
+  window.visualViewport.addEventListener("scroll", fix);
+  fix();
+}
+const viewer = $("viewer");
+list.addEventListener("click", e => {
+  if (e.target.classList.contains("thumb")) { viewer.querySelector("img").src = e.target.src; viewer.hidden = false; }
+});
+viewer.addEventListener("click", () => { viewer.hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") viewer.hidden = true; });
+
+document.addEventListener("DOMContentLoaded", () => {
+  loadChats();
+  render();
+});
+</script>
+</body>
+</html>
