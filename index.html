@@ -41,7 +41,25 @@ textarea{flex:1;resize:none;font:inherit;color:inherit;background:var(--surface)
 .send{background:var(--accent);color:var(--on-accent)}
 .send:disabled{opacity:.4;cursor:default}
 :focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.rich{white-space:normal}
+.rich>:first-child{margin-top:0}.rich>:last-child{margin-bottom:0}
+.rich p{margin:.5em 0}.rich ul,.rich ol{margin:.5em 0;padding-left:1.3em}
+.rich h1,.rich h2,.rich h3{font-size:1em;font-weight:600;margin:.8em 0 .3em}
+.rich pre{background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px;overflow-x:auto;font-size:14px;white-space:pre}
+.rich code{font-family:ui-monospace,Menlo,monospace;font-size:.9em}
+.rich table{border-collapse:collapse;display:block;overflow-x:auto}.rich th,.rich td{border:1px solid var(--line);padding:4px 8px}
+.rich a{color:var(--accent)}
+.katex-display{overflow-x:auto;overflow-y:hidden}
+.thumb{cursor:zoom-in}
+#viewer{position:fixed;inset:0;background:rgba(0,0,0,.92);display:flex;align-items:center;justify-content:center;z-index:10}
+#viewer[hidden]{display:none}
+#viewer img{max-width:100%;max-height:100%;object-fit:contain}
+#viewer button{position:absolute;top:calc(env(safe-area-inset-top,0px) + 12px);right:16px;background:none;border:0;color:#fff;font-size:32px;line-height:1;padding:8px}
 </style>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.css">
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/marked/4.3.0/marked.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/dompurify/3.0.6/purify.min.js"></script>
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.9/katex.min.js"></script>
 </head>
 <body>
 <div class="app" id="app">
@@ -59,6 +77,7 @@ textarea{flex:1;resize:none;font:inherit;color:inherit;background:var(--surface)
     </button>
   </form>
 </div>
+<div id="viewer" hidden><button type="button" aria-label="Đóng">×</button><img alt="Ảnh phóng to"></div>
 <script>
 const API_URL = "https://chatbotvua36.duong158209.workers.dev";
 const MAX_CONTEXT = 20;
@@ -67,23 +86,43 @@ const $ = id => document.getElementById(id);
 const list = $("list"), box = $("box"), send = $("send"), form = $("form"), chip = $("chip"), fileInput = $("file");
 let history = [], busy = false, pending = null;
 
+// Hiển thị markdown + công thức toán. Không tải được thư viện thì hiện chữ thường.
+const esc = s => s.replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+function rich(el, src) {
+  if (!(window.marked && window.DOMPurify)) { el.textContent = src; return; }
+  const math = [];
+  const stash = (t, display) => "@@M" + (math.push([t, display]) - 1) + "@@";
+  const s = src.split(/(```[\s\S]*?```|`[^`\n]*`)/g).map((part, i) => i % 2 ? part : part
+    .replace(/\$\$([\s\S]+?)\$\$/g, (_, t) => stash(t, true))
+    .replace(/\\\[([\s\S]+?)\\\]/g, (_, t) => stash(t, true))
+    .replace(/\\\(([\s\S]+?)\\\)/g, (_, t) => stash(t, false))
+    .replace(/\$(?!\s)([^\n$]*?[^\s$])\$/g, (_, t) => stash(t, false))).join("");
+  const html = DOMPurify.sanitize(marked.parse(s, { breaks: true }));
+  el.innerHTML = html.replace(/@@M(\d+)@@/g, (_, i) => {
+    const [t, display] = math[+i];
+    try { return window.katex ? katex.renderToString(t, { displayMode: display, throwOnError: false }) : esc(t); }
+    catch (e) { return esc(t); }
+  });
+}
+
 try { history = JSON.parse(localStorage.getItem("chat") || "[]"); } catch (e) {}
 function save() {
-  try {
-    localStorage.setItem("chat", JSON.stringify(history.map(m => ({
-      role: m.role, content: m.content, caption: m.caption, file: m.file, hadImage: !!(m.image || m.hadImage)
-    }))));
-  } catch (e) {}
+  const pack = withThumb => JSON.stringify(history.map(m => ({
+    role: m.role, content: m.content, caption: m.caption, file: m.file,
+    hadImage: !!(m.image || m.thumb || m.hadImage), thumb: withThumb ? m.thumb : undefined
+  })));
+  try { localStorage.setItem("chat", pack(true)); }
+  catch (e) { try { localStorage.setItem("chat", pack(false)); } catch (e2) {} }
 }
 
 function add(m, extra) {
   const d = document.createElement("div");
   d.className = "msg " + (m.role === "user" ? "me" : "bot") + (extra ? " " + extra : "");
   const shown = m.role === "user" ? (m.caption || "") : m.content;
-  if (m.image) { const i = document.createElement("img"); i.className = "thumb"; i.src = m.image; d.appendChild(i); }
+  if (m.image || m.thumb) { const i = document.createElement("img"); i.className = "thumb"; i.alt = "Ảnh đã gửi"; i.src = m.image || m.thumb; d.appendChild(i); }
   else if (m.hadImage) { const t = document.createElement("div"); t.className = "tag"; t.textContent = "[Ảnh đã gửi]"; d.appendChild(t); }
   if (m.file) { const t = document.createElement("div"); t.className = "tag"; t.textContent = "Tệp: " + m.file; d.appendChild(t); }
-  if (shown) d.appendChild(document.createTextNode(shown));
+  if (m.role === "assistant" && !extra) { d.classList.add("rich"); rich(d, m.content); } else if (shown) d.appendChild(document.createTextNode(shown));
   list.appendChild(d);
   list.scrollTop = list.scrollHeight;
   return d;
@@ -123,17 +162,17 @@ function showPending() {
 
 $("attach").addEventListener("click", () => fileInput.click());
 
-function shrink(file) {
+function shrink(file, max = 1280, q = 0.8) {
   const url = URL.createObjectURL(file);
   return new Promise((ok, no) => {
     const img = new Image();
     img.onload = () => {
-      const k = Math.min(1, 1280 / Math.max(img.naturalWidth, img.naturalHeight));
+      const k = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
       const c = document.createElement("canvas");
       c.width = Math.round(img.naturalWidth * k); c.height = Math.round(img.naturalHeight * k);
       c.getContext("2d").drawImage(img, 0, 0, c.width, c.height);
       URL.revokeObjectURL(url);
-      ok(c.toDataURL("image/jpeg", 0.8));
+      ok(c.toDataURL("image/jpeg", q));
     };
     img.onerror = () => { URL.revokeObjectURL(url); no(new Error("Không đọc được ảnh này")); };
     img.src = url;
@@ -164,7 +203,7 @@ fileInput.addEventListener("change", async () => {
   showChip("Đang đọc " + f.name + "…");
   try {
     if (f.type.startsWith("image/")) {
-      pending = { type: "image", name: f.name, dataUrl: await shrink(f) };
+      pending = { type: "image", name: f.name, dataUrl: await shrink(f), thumb: await shrink(f, 640, 0.7) };
     } else {
       const raw = (f.type === "application/pdf" || /\.pdf$/i.test(f.name)) ? await readPdf(f) : await f.text();
       const bad = (raw.slice(0, 2000).match(/\uFFFD/g) || []).length;
@@ -201,7 +240,7 @@ form.addEventListener("submit", async e => {
 
   const att = pending;
   const m = { role: "user", content: text, caption: text };
-  if (att && att.type === "image") m.image = att.dataUrl;
+  if (att && att.type === "image") { m.image = att.dataUrl; m.thumb = att.thumb; }
   if (att && att.type === "text") {
     m.file = att.name;
     m.content = "[Tệp đính kèm: " + att.name + (att.truncated ? ", đã cắt bớt vì quá dài" : "") + "]\n```\n" + att.text + "\n```\n\n" + (text || "Hãy tóm tắt tệp này.");
@@ -219,7 +258,7 @@ form.addEventListener("submit", async e => {
     const data = await res.json();
     if (!res.ok || data.error) throw new Error(data.error || "Lỗi " + res.status);
     history.push({ role: "assistant", content: data.reply });
-    reply.className = "msg bot"; reply.textContent = data.reply;
+    reply.className = "msg bot rich"; rich(reply, data.reply);
   } catch (err) {
     history.pop(); mine.remove();
     box.value = text; fit();
@@ -241,7 +280,21 @@ if (window.visualViewport) {
   window.visualViewport.addEventListener("scroll", fix);
   fix();
 }
-render();
+// Bấm vào ảnh đã gửi để xem to; bấm bất kỳ đâu để đóng.
+const viewer = $("viewer");
+list.addEventListener("click", e => {
+  if (e.target.classList.contains("thumb")) { viewer.querySelector("img").src = e.target.src; viewer.hidden = false; }
+});
+viewer.addEventListener("click", () => { viewer.hidden = true; });
+document.addEventListener("keydown", e => { if (e.key === "Escape") viewer.hidden = true; });
+
+// Chờ các thư viện (nạp kiểu defer) tải xong rồi mới hiển thị tin nhắn.
+document.addEventListener("DOMContentLoaded", () => {
+  if (window.DOMPurify) DOMPurify.addHook("afterSanitizeAttributes", n => {
+    if (n.tagName === "A") { n.setAttribute("target", "_blank"); n.setAttribute("rel", "noopener noreferrer"); }
+  });
+  render();
+});
 </script>
 </body>
 </html>
