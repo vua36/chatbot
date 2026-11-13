@@ -175,7 +175,10 @@ export default {
         let prompt = lastText.replace(/tạo ảnh|vẽ |generate image|làm ảnh|tạo hình/gi, "").trim();
         if (!prompt) prompt = "a cute dog";
         if (Array.isArray(lastUser?.content) && lastUser.content.some(p => p.type === "image_url")) {
-          prompt = "a cute dog with a human face, " + (prompt || "based on the reference");
+          prompt = "a cute dog whose head is exactly the person from the reference photo, photorealistic, " + (prompt || "");
+        }
+        if (/sai|đầu của nó|ảnh như|ảnh t gửi|face|khuôn mặt/i.test(lastText)) {
+          prompt = "a cute dog with the exact same human face from the user's reference photo, realistic dog body, human face, " + prompt;
         }
         const img = await generateImage(prompt, env);
         return Response.json({ reply: "", image: img }, { headers: cors });
